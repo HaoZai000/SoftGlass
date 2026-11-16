@@ -18,6 +18,13 @@ data class SoftGlassStyle(
     val thickness: Float = 96f,
     val reflectOffset: Float = 600f,
     val refractionScale: Float = 1f,
+    /**
+     * 液态玻璃折射：只替换边缘折射的采样方式（圆弧剖面 + SDF 梯度位移），
+     * 倒角法线、方向光、反射、调色与模糊仍走柔光玻璃那一套。
+     */
+    val liquidRefraction: Boolean = false,
+    /** 液态折射的光学参数；不传就用 [LiquidLens] 的默认值，调用处可整体替换。 */
+    val liquidLens: LiquidLens = LiquidLens(),
     val refractIOR: Float = 3f,
     val reflectionStrength: Float = 0.8f,
     val reflectionLighten: Float = 1f,
@@ -64,3 +71,22 @@ data class SoftGlassStyle(
     /** 先套基调再套填充，产出交给 shader 的最终样式。 */
     fun filled(isDark: Boolean): SoftGlassStyle = fill.apply(tone.apply(this), isDark)
 }
+
+/**
+ * 液态玻璃的 lens 参数
+ *
+ * 几何量用 dp 给出，灌 uniform 时按当前 density 换成屏幕 px；折射带会被封顶在
+ * 倒角带内，否则内区边界会出现位移跳变。默认值即全局口径：宽 10dp、位移 42dp；
+ * 课程卡片这类小尺寸面板在调用处另给一套（5 / 25）。
+ */
+@Immutable
+data class LiquidLens(
+    /** 折射带宽度。 */
+    val refractionHeight: Dp = 10.dp,
+    /** 边缘最大位移（实际再乘卡片的折射倍率 [SoftGlassStyle.refractionScale]）。 */
+    val refractionAmount: Dp = 42.dp,
+    /** 叠加指向中心的径向梯度（参考实现的 depthEffect）。 */
+    val depthEffect: Boolean = true,
+    /** 色散强度，0 = 关；>0 时边缘做 7 次错位采样（参考实现的 chromaticAberration）。 */
+    val chromaticAberration: Float = 0f,
+)

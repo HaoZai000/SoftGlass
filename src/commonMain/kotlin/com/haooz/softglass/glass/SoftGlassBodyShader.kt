@@ -1,7 +1,7 @@
 package com.haooz.softglass.glass
 
 /** 静态壁纸路径的主体 shader：几何 SDF + 金字塔采样 + 调色 + 倒角剖面与光照。 */
-val SOFT_GLASS_BODY_SHADER = GLASS_SDF + """
+val SOFT_GLASS_BODY_SHADER = GLASS_SDF + GLASS_LIQUID + """
 uniform float2 uSize;
 uniform float4 uCornerRadii;
 uniform float2 uOrigin;
@@ -117,6 +117,31 @@ float4 processLighting(float4 color, float3 normal, float x, float falloffEnd) {
     return hsvv(color, lightenParam);
 }
 
+// 液态折射：偏移先换算到金字塔 texel 空间；色散权重与参考实现逐项一致。
+float3 sampleLiquid(float2 texPx, float texK, float2 p, float2 halfSize, float cornerR, float sd) {
+    float2 offset = liquidRefractOffset(p, halfSize, cornerR, sd) * texK;
+    float2 base = texPx + offset;
+    if (uLiquidDispersion <= 0.0) { return sampleLevel(base); }
+
+    float2 spread = offset * (uLiquidDispersion * (p.x * p.y) / max(halfSize.x * halfSize.y, 1e-3));
+    float3 c = float3(0.0);
+    float3 s0 = sampleLevel(base + spread);
+    c.r += s0.r / 3.5;
+    float3 s1 = sampleLevel(base + spread * (2.0 / 3.0));
+    c.r += s1.r / 3.5; c.g += s1.g / 7.0;
+    float3 s2 = sampleLevel(base + spread * (1.0 / 3.0));
+    c.r += s2.r / 3.5; c.g += s2.g / 3.5;
+    float3 s3 = sampleLevel(base);
+    c.g += s3.g / 3.5;
+    float3 s4 = sampleLevel(base - spread * (1.0 / 3.0));
+    c.g += s4.g / 3.5; c.b += s4.b / 3.0;
+    float3 s5 = sampleLevel(base - spread * (2.0 / 3.0));
+    c.b += s5.b / 3.0;
+    float3 s6 = sampleLevel(base - spread);
+    c.r += s6.r / 7.0; c.b += s6.b / 3.0;
+    return c;
+}
+
 half4 main(float2 fragCoord) {
     float2 halfSize = uSize * 0.5;
     float2 p = fragCoord - halfSize;
@@ -160,6 +185,8 @@ half4 main(float2 fragCoord) {
     float3 refractionCol;
     if (inner) {
         refractionCol = sampleLevel(texPx);
+    } else if (uLiquid > 0.5) {
+        refractionCol = sampleLiquid(texPx, texK, p, halfSize, cornerR, sd);
     } else {
         float ior = uIOR + 0.2 * uHit;
         float3 refractDir = miRefract(float3(0.0, 0.0, -1.0), normal, 1.0 / ior);
@@ -169,6 +196,7 @@ half4 main(float2 fragCoord) {
     }
 
     float3 materialRgb;
+    float edgeGate = liquidEdgeGate(x);
     if (inner) {
         materialRgb = refractionCol;
     } else {
@@ -176,8 +204,8 @@ half4 main(float2 fragCoord) {
         float3 reflectionCol = sampleLevel(
             texPx + refractXY * (uReflectOffsetPx * (1.0 - w) * texK)
         );
-        materialRgb = mix(refractionCol, reflectionCol, (1.0 - nmlZ) * uReflStrength);
-        materialRgb = addLight(materialRgb, reflectionCol, (1.0 - w) * uReflLighten);
+        materialRgb = mix(refractionCol, reflectionCol, (1.0 - nmlZ) * uReflStrength * edgeGate);
+        materialRgb = addLight(materialRgb, reflectionCol, (1.0 - w) * uReflLighten * edgeGate);
     }
 
     float3 bigCol = sampleCoarse(texPx);
@@ -188,7 +216,8 @@ half4 main(float2 fragCoord) {
     glassMaterial.rgb += tEdge * tEdge * uInnerBottom;
 
     if (!inner && uEdgeHighlight > 0.5) {
-        glassMaterial = processLighting(glassMaterial, normal, x, uLightFalloff);
+        float4 lit = processLighting(glassMaterial, normal, x, uLightFalloff);
+        glassMaterial = mix(glassMaterial, lit, edgeGate);
     }
 
     if (uUsePowGate > 0.5) {

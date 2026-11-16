@@ -23,7 +23,7 @@ fun GlassSpec.chromeStyle(
     tone: GlassTone = this.tone,
 ): SoftGlassStyle {
     val resolved = style.copy(fill = fill, tone = tone).filled(isDark)
-    return if (level == GlassMaterialLevel.SOFT) {
+    return if (level == GlassMaterialLevel.SOFT || level == GlassMaterialLevel.LIQUID) {
         resolved
     } else {
         resolved.copy(refractionScale = 0f, edgeHighlight = false)

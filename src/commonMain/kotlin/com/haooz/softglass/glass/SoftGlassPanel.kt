@@ -104,6 +104,7 @@ fun Modifier.softGlass(
                     radiusPx = glassRadius,
                     levelA = levels.a,
                     levelB = levels.b,
+                    density = density.density,
                 )
             }.isSuccess
             if (!ok) {
@@ -173,6 +174,7 @@ private fun GlassShaderProgram.applyBodyUniforms(
     radiusPx: Float,
     levelA: Int,
     levelB: Int,
+    density: Float,
 ) {
     applyGeometryUniforms(panelSize, radiusPx, style)
     applySamplingUniforms(backdrop, levelA, levelB)
@@ -181,6 +183,21 @@ private fun GlassShaderProgram.applyBodyUniforms(
     setFloat("uEdgePow", style.edgePow.coerceAtLeast(0.05f))
     setFloat("uThicknessPx", style.thickness * refractionScale)
     setFloat("uReflectOffsetPx", if (refractionScale > 0f) style.reflectOffset else 0f)
+    // 液态玻璃：只换折射的位移场；lens 是 dp 口径，按 density 换成屏幕 px，带高封顶在 inner 边界内
+    val lens = style.liquidLens
+    val liquidOn = style.liquidRefraction && refractionScale > 0f
+    val liquidInnerX = liquidBandLimitRatio(style.edgePow)
+    setFloat("uLiquid", if (liquidOn) 1f else 0f)
+    setFloat(
+        "uLiquidHeightPx",
+        (lens.refractionHeight.value * density)
+            .coerceAtMost(liquidInnerX * style.edgeWidth)
+            .coerceAtLeast(1f),
+    )
+    setFloat("uLiquidAmountPx", lens.refractionAmount.value * density * refractionScale)
+    setFloat("uLiquidDepth", if (lens.depthEffect) 1f else 0f)
+    setFloat("uLiquidDispersion", lens.chromaticAberration.coerceAtLeast(0f))
+    setFloat("uLiquidInnerX", liquidInnerX)
     setFloat("uIOR", style.refractIOR)
     setFloat("uReflStrength", style.reflectionStrength)
     setFloat("uReflLighten", style.reflectionLighten)

@@ -17,21 +17,59 @@ fun GlassRuntimeShader.asAndroidRuntimeShader(): android.graphics.RuntimeShader 
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 internal class AndroidGlassRuntimeShader(val shader: android.graphics.RuntimeShader) : GlassRuntimeShader {
-    override fun setFloatUniform(name: String, value: Float) = shader.setFloatUniform(name, value)
-    override fun setFloatUniform(name: String, value1: Float, value2: Float) =
-        shader.setFloatUniform(name, value1, value2)
-    override fun setFloatUniform(name: String, value1: Float, value2: Float, value3: Float) =
-        shader.setFloatUniform(name, value1, value2, value3)
-    override fun setFloatUniform(name: String, value1: Float, value2: Float, value3: Float, value4: Float) =
-        shader.setFloatUniform(name, value1, value2, value3, value4)
-    override fun setFloatUniform(name: String, values: FloatArray) = shader.setFloatUniform(name, values)
-    override fun setIntUniform(name: String, value: Int) = shader.setIntUniform(name, value)
-    override fun setIntUniform(name: String, value1: Int, value2: Int) =
-        shader.setIntUniform(name, value1, value2)
-    override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int) =
-        shader.setIntUniform(name, value1, value2, value3)
-    override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int, value4: Int) =
-        shader.setIntUniform(name, value1, value2, value3, value4)
-    override fun setIntUniform(name: String, values: IntArray) = shader.setIntUniform(name, values)
-    override fun setColorUniform(name: String, color: Color) = shader.setColorUniform(name, color.toArgb())
+
+    private val uniforms = UniformCache()
+
+    override fun setFloatUniform(name: String, value: Float) {
+        if (uniforms.setFloat1(name, value)) shader.setFloatUniform(name, value)
+    }
+
+    override fun setFloatUniform(name: String, value1: Float, value2: Float) {
+        if (uniforms.setFloat2(name, value1, value2)) shader.setFloatUniform(name, value1, value2)
+    }
+
+    override fun setFloatUniform(name: String, value1: Float, value2: Float, value3: Float) {
+        if (uniforms.setFloat3(name, value1, value2, value3)) {
+            shader.setFloatUniform(name, value1, value2, value3)
+        }
+    }
+
+    override fun setFloatUniform(name: String, value1: Float, value2: Float, value3: Float, value4: Float) {
+        if (uniforms.setFloat4(name, value1, value2, value3, value4)) {
+            shader.setFloatUniform(name, value1, value2, value3, value4)
+        }
+    }
+
+    override fun setFloatUniform(name: String, values: FloatArray) {
+        if (uniforms.setFloatArray(name, values)) shader.setFloatUniform(name, values)
+    }
+
+    override fun setIntUniform(name: String, value: Int) {
+        if (uniforms.setInt1(name, value)) shader.setIntUniform(name, value)
+    }
+
+    override fun setIntUniform(name: String, value1: Int, value2: Int) {
+        if (uniforms.setInt2(name, value1, value2)) shader.setIntUniform(name, value1, value2)
+    }
+
+    override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int) {
+        if (uniforms.setInt3(name, value1, value2, value3)) {
+            shader.setIntUniform(name, value1, value2, value3)
+        }
+    }
+
+    override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int, value4: Int) {
+        if (uniforms.setInt4(name, value1, value2, value3, value4)) {
+            shader.setIntUniform(name, value1, value2, value3, value4)
+        }
+    }
+
+    override fun setIntUniform(name: String, values: IntArray) {
+        if (uniforms.setIntArray(name, values)) shader.setIntUniform(name, values)
+    }
+
+    override fun setColorUniform(name: String, color: Color) {
+        val argb = color.toArgb()
+        if (uniforms.setColor(name, argb)) shader.setColorUniform(name, argb)
+    }
 }

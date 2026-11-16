@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalDensity
 
 @Immutable
 data class GlassSurfaceAlphaDrop(val light: Float = 0f, val dark: Float = 0f)
@@ -19,10 +20,18 @@ object GlassEnvironment {
         internal set
     var hasWallpaper: Boolean by mutableStateOf(true)
         internal set
+    /** 当前 density，供 dp 口径的 lens 参数在灌 uniform 时换算成 px。 */
+    var density: Float by mutableStateOf(1f)
+        internal set
 
-    fun update(isDark: Boolean = this.isDark, hasWallpaper: Boolean = this.hasWallpaper) {
+    fun update(
+        isDark: Boolean = this.isDark,
+        hasWallpaper: Boolean = this.hasWallpaper,
+        density: Float = this.density,
+    ) {
         this.isDark = isDark
         this.hasWallpaper = hasWallpaper
+        this.density = density
     }
 }
 
@@ -50,9 +59,11 @@ fun SoftGlassTheme(
     content: @Composable () -> Unit,
 ) {
     val tuning = level.tuning()
+    val density = LocalDensity.current.density
     SideEffect {
         GlassEnvironment.isDark = isDark
         GlassEnvironment.hasWallpaper = hasWallpaper
+        GlassEnvironment.density = density
     }
     CompositionLocalProvider(
         LocalGlassSpec provides preset,

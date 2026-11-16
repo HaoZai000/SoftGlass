@@ -1,7 +1,7 @@
 package com.haooz.softglass.glass
 
 /** 实时录制路径的 shader：采样控件脚下的真实内容。 */
-val SOFT_GLASS_LIVE_SHADER = GLASS_SDF + """
+val SOFT_GLASS_LIVE_SHADER = GLASS_SDF + GLASS_LIQUID + """
 uniform shader content;
 
 uniform float2 uSize;
@@ -58,15 +58,16 @@ float3 sampleContent(float2 p) {
     return sampleContentRGBA(p).rgb;
 }
 
-// 大模糊底：控件脚下只有一张内容，用绕一圈的 5 点平均近似卡片侧的粗级纹理。
+// 大模糊底：控件脚下只有一张内容，用一对对角采样近似圆盘平均。
+// 内容本来就被 blur 过，两次采样足够代表大范围平均色，比原来 4 次省一半纹理读取。
 float3 contentBig(float2 p, float3 center) {
     float r = min(uSize.x, uSize.y) * 0.42;
     float3 sum = center;
-    for (int i = 0; i < 4; i++) {
-        float a = float(i) * 1.5707963 + 0.6;
+    for (int i = 0; i < 2; i++) {
+        float a = float(i) * 3.1415927 + 0.6;
         sum += sampleContent(p + float2(cos(a), sin(a)) * r);
     }
-    return sum / 5.0;
+    return sum / 3.0;
 }
 
 float smooth5Map(float t) {
@@ -123,6 +124,28 @@ float4 processLighting(float4 color, float3 normal, float x, float falloffEnd) {
     float lightenParam = (l1 + l2) * 2.0 * dynamicAdd(color.rgb) * mask;
     return hsvv(color, lightenParam);
 }
+
+// 液态折射：直接在屏幕 px 里位移采样脚下内容；色散权重与参考实现逐项一致。
+float3 sampleLiquidContent(float2 baseCoord, float2 p, float2 halfSize, float cornerR, float sd) {
+    float2 offset = liquidRefractOffset(p, halfSize, cornerR, sd);
+    float2 base = baseCoord + offset;
+    if (uLiquidDispersion <= 0.0) { return sampleContent(base); }
+
+    float2 spread = offset * (uLiquidDispersion * (p.x * p.y) / max(halfSize.x * halfSize.y, 1e-3));
+    float3 c = float3(0.0);
+    c.r += sampleContent(base + spread).r / 3.5;
+    float3 s1 = sampleContent(base + spread * (2.0 / 3.0));
+    c.r += s1.r / 3.5; c.g += s1.g / 7.0;
+    float3 s2 = sampleContent(base + spread * (1.0 / 3.0));
+    c.r += s2.r / 3.5; c.g += s2.g / 3.5;
+    c.g += sampleContent(base).g / 3.5;
+    float3 s4 = sampleContent(base - spread * (1.0 / 3.0));
+    c.g += s4.g / 3.5; c.b += s4.b / 3.0;
+    c.b += sampleContent(base - spread * (2.0 / 3.0)).b / 3.0;
+    float3 s6 = sampleContent(base - spread);
+    c.r += s6.r / 7.0; c.b += s6.b / 3.0;
+    return c;
+}
 """ + GLASS_COLOR_PROCESS + """
 
 half4 main(float2 fragCoord) {
@@ -162,6 +185,8 @@ half4 main(float2 fragCoord) {
     float3 refractionCol;
     if (inner) {
         refractionCol = centerSample.rgb;
+    } else if (uLiquid > 0.5) {
+        refractionCol = sampleLiquidContent(fragCoord, p, halfSize, cornerR, sd);
     } else {
         float3 refractDir = miRefract(float3(0.0, 0.0, -1.0), normal, 1.0 / uIOR);
         float refractThickness = mix((uThicknessPx - uEdgePx) * 2.0, uThicknessPx * 2.0, w);
@@ -170,6 +195,7 @@ half4 main(float2 fragCoord) {
     }
 
     float3 materialRgb;
+    float edgeGate = liquidEdgeGate(x);
     if (inner) {
         materialRgb = refractionCol;
     } else {
@@ -177,8 +203,8 @@ half4 main(float2 fragCoord) {
         float3 reflectionCol = sampleContent(
             fragCoord + refractXY * (uReflectOffsetPx * (1.0 - w))
         );
-        materialRgb = mix(refractionCol, reflectionCol, (1.0 - nmlZ) * uReflStrength);
-        materialRgb = addLight(materialRgb, reflectionCol, (1.0 - w) * uReflLighten);
+        materialRgb = mix(refractionCol, reflectionCol, (1.0 - nmlZ) * uReflStrength * edgeGate);
+        materialRgb = addLight(materialRgb, reflectionCol, (1.0 - w) * uReflLighten * edgeGate);
     }
 
     float3 bigCol = contentBig(fragCoord, centerSample.rgb);
@@ -189,7 +215,8 @@ half4 main(float2 fragCoord) {
     glassMaterial.rgb += tEdge * tEdge * uInnerBottom;
 
     if (!inner && uEdgeHighlight > 0.5) {
-        glassMaterial = processLighting(glassMaterial, normal, x, uLightFalloff);
+        float4 lit = processLighting(glassMaterial, normal, x, uLightFalloff);
+        glassMaterial = mix(glassMaterial, lit, edgeGate);
     }
 
     if (uUsePowGate > 0.5) {

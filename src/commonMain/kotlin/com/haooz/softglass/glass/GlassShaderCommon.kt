@@ -4,6 +4,49 @@ import com.haooz.softglass.shape.SdfG2Corner
 
 internal val GLASS_SDF = SdfG2Corner.shaderSource
 
+/**
+ * 液态玻璃折射（移植自 AndroidLiquidGlass 的 `RoundedRectRefractionShaderString`）。
+ *
+ * 只负责「位移场」：带内沿圆角矩形 SDF 梯度向形状内部采样，剖面是 `1 - sqrt(1 - t²)`，
+ * 越靠外边缘位移越大、带尾导数为 0；梯度半径放宽到 1.5r 再叠径向项，藏掉圆角切点处的
+ * 曲率跳变。倒角法线、方向光、反射、调色仍走柔光玻璃那一套。
+ *
+ * `uLiquidInnerX` 是柔光 `inner` 的硬切位置（edgePow = 4 时约 0.564×edgeWidth）：
+ * 折射带高必须卡在它以内，边光 / 反射也要在到达它之前由 `liquidEdgeGate` 收到 0，
+ * 否则会在内区边界留下一条「折射突然消失」的硬边。
+ */
+internal val GLASS_LIQUID = """
+uniform float uLiquid;
+uniform float uLiquidHeightPx;
+uniform float uLiquidAmountPx;
+uniform float uLiquidDepth;
+uniform float uLiquidDispersion;
+uniform float uLiquidInnerX;
+
+float liquidCircleMap(float t) {
+    t = clamp(t, 0.0, 1.0);
+    return 1.0 - sqrt(max(1.0 - t * t, 0.0));
+}
+
+// 柔光的 inner 是硬切：从 x ≈ uLiquidInnerX 起方向光与反射整段消失。
+// 液态档把这两项在到达边界前收干净，否则折射带内侧会出现一条「折射突然消失」的直边。
+float liquidEdgeGate(float x) {
+    if (uLiquid <= 0.5) { return 1.0; }
+    return 1.0 - smoothstep(uLiquidInnerX * 0.45, uLiquidInnerX, x);
+}
+
+// 位移为负 = 往形状内部采样：边缘的内容被「压」进来，形成凸透镜的挤压感。
+float2 liquidRefractOffset(float2 p, float2 halfSize, float cornerR, float sd) {
+    float band = clamp(-sd / max(uLiquidHeightPx, 1e-3), 0.0, 1.0);
+    float amount = -liquidCircleMap(1.0 - band) * uLiquidAmountPx;
+    float gradR = min(cornerR * 1.5, min(halfSize.x, halfSize.y));
+    float2 grad = roundRectGrad(p, halfSize, gradR);
+    float2 radial = p / max(length(p), 1e-3);
+    float2 dir = grad + uLiquidDepth * radial;
+    return amount * dir / max(length(dir), 1e-4);
+}
+"""
+
 /** 大模糊底色固定取金字塔最粗一级，与当前模糊档位无关。 */
 internal val GLASS_WALLPAPER_COARSE = """
 const float3 GLASS_LUMA = float3(0.2126, 0.7152, 0.0722);

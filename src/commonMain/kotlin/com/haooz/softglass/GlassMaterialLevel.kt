@@ -3,7 +3,7 @@ package com.haooz.softglass
 import androidx.compose.runtime.Immutable
 
 /** 材质质量档。库默认 [SOFT]。 */
-enum class GlassMaterialLevel { SOFT, FROSTED, NONE }
+enum class GlassMaterialLevel { SOFT, LIQUID, FROSTED, NONE }
 
 /** 档位导出的全部降级口径，组件只读这一份。 */
 @Immutable
@@ -20,6 +20,12 @@ data class GlassTuning(
 
 fun GlassMaterialLevel.tuning(): GlassTuning = when (this) {
     GlassMaterialLevel.SOFT -> GlassTuning()
+    // 液态玻璃：只换折射的绘制方式，底色 / 边光 / 调色与柔光一致，模糊单独压低一档
+    GlassMaterialLevel.LIQUID -> GlassTuning(
+        blurDp = 4f,
+        panelBlurDp = 8f,
+        dialogBlurDp = 8f,
+    )
     GlassMaterialLevel.FROSTED -> GlassTuning(
         surfaceAlphaDropLight = 0f,
         surfaceAlphaDropDark = 0f,
