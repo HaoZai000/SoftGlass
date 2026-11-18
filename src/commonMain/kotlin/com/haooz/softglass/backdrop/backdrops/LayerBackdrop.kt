@@ -3,6 +3,7 @@ package com.haooz.softglass.backdrop.backdrops
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -15,7 +16,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.unit.Density
 import com.haooz.softglass.backdrop.GlassBackdrop
 import com.haooz.softglass.internal.InverseLayerScope
@@ -43,8 +44,20 @@ class LayerBackdrop internal constructor(
 
     override val isCoordinatesDependent: Boolean = true
 
-    override var contentVersion: Int = 0
-        internal set
+    /**
+     * 录制版本号。
+     *
+     * 做成快照状态：采样节点在 draw 期读它，任何一层重录（滚动、翻页、切主 tab 后按
+     * recordKey 重录）都会让玻璃重新采样——采样节点自己位置不变的场景（底栏 / 顶栏 /
+     * 设置按钮）否则会一直停在旧像素上。
+     */
+    override var contentVersion: Int
+        get() = contentVersionState.intValue
+        internal set(value) {
+            contentVersionState.intValue = value
+        }
+
+    private val contentVersionState = mutableIntStateOf(0)
 
     internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
@@ -64,7 +77,9 @@ class LayerBackdrop internal constructor(
             val offset = try {
                 layerCoordinates.localPositionOf(coordinates)
             } catch (_: Exception) {
-                coordinates.positionInWindow() - layerCoordinates.positionInWindow()
+                // 跨窗口（Popup / Dialog）时 localPositionOf 不可用；窗口内坐标各自从窗口
+                // 左上角算起，直接相减会带上弹窗窗口的屏幕偏移，必须用屏幕坐标对齐。
+                coordinates.positionOnScreen() - layerCoordinates.positionOnScreen()
             }
             translate(-offset.x, -offset.y)
             if (recordScale != 1f) {

@@ -198,6 +198,9 @@ private class DrawBackdropNode(
     }
 
     override fun ContentDrawScope.draw() {
+        // 采样源重录后必须重画：底栏 / 顶栏 / 设置按钮这类位置不变的元素否则会定格在旧像素上
+        // （例如切主 tab 后底栏仍显示上一页内容）。
+        backdrop.contentVersion
         if (effectScope.update(this)) updateEffects()
 
         val contentScope = this
