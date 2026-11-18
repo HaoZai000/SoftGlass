@@ -41,11 +41,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.HaoZai000.softglass:softglass:0.1.2")
+    implementation("com.github.HaoZai000.SoftGlass:softglass:0.1.3")
 }
 ```
 
-JitPack 多模块坐标是 `com.github.<User>.<Repo>:<module>:<tag>`；`com.github.HaoZai000:softglass` 只有聚合 POM，缺 KMP 变体元数据，KMP 工程会卡在 platform 变体匹配。
+JitPack 多模块坐标是 `com.github.<User>.<Repo>:<module>:<tag>`；`com.github.HaoZai000:SoftGlass` 只有聚合 POM，缺 KMP 变体元数据，KMP 工程会卡在 platform 变体匹配。
 
 ## 四、用法
 

@@ -62,7 +62,7 @@ publishing {
         pom {
             name.set("SoftGlass")
             description.set("Compose Multiplatform 的柔光玻璃渲染引擎：采样、折射、7 级模糊金字塔与连续圆角几何")
-            url.set("https://github.com/HaoZai000/softglass")
+            url.set("https://github.com/HaoZai000/SoftGlass")
             licenses {
                 license {
                     name.set("Apache-2.0")
@@ -70,9 +70,9 @@ publishing {
                 }
             }
             scm {
-                url.set("https://github.com/HaoZai000/softglass")
-                connection.set("scm:git:git://github.com/HaoZai000/softglass.git")
-                developerConnection.set("scm:git:ssh://git@github.com/HaoZai000/softglass.git")
+                url.set("https://github.com/HaoZai000/SoftGlass")
+                connection.set("scm:git:git://github.com/HaoZai000/SoftGlass.git")
+                developerConnection.set("scm:git:ssh://git@github.com/HaoZai000/SoftGlass.git")
             }
             developers {
                 developer {
