@@ -71,6 +71,7 @@ float3 sampleLevel(float2 texPx) {
 /** 先模糊后调色：gcr 与 glassColor 的输入都取自重模糊后的背景色。 */
 internal val GLASS_COLOR_PROCESS = """
 uniform float3 uDarkerColor;
+uniform float uBodyDensity;
 
 float glassLuma(float3 c) { return dot(c, GLASS_LUMA); }
 
@@ -99,7 +100,9 @@ float4 processGlassColor(float3 refractCol, float3 bigCol) {
     float lumin = clamp(glassLuma(b), 0.0, 1.0);
     float tBurn = (uBurn <= 0.0) ? 1.0 : pow(lumin, uBurn);
     tBurn -= 0.5;
-    float ratio = 0.8 * mix(lumin, 1.0, 1.587 * tBurn * tBurn * tBurn + 0.5);
+    // 玻璃体浓度：ratio 同时决定乘法压暗量（gcr）与内区混色量（im），
+    // 1 = 参考实现的密度；越小越接近纯窗口。
+    float ratio = 0.8 * mix(lumin, 1.0, 1.587 * tBurn * tBurn * tBurn + 0.5) * uBodyDensity;
 
     float3 gcr = mix(float3(1.0), b, ratio);
     float m = (gcr.r + gcr.g + gcr.b) / 3.0;

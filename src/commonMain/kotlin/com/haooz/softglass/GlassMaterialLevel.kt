@@ -1,6 +1,7 @@
 package com.haooz.softglass
 
 import androidx.compose.runtime.Immutable
+import com.haooz.softglass.glass.SoftGlassStyle
 
 /** 材质质量档。库默认 [SOFT]。 */
 enum class GlassMaterialLevel { SOFT, LIQUID, FROSTED, NONE }
@@ -20,7 +21,7 @@ data class GlassTuning(
 
 fun GlassMaterialLevel.tuning(): GlassTuning = when (this) {
     GlassMaterialLevel.SOFT -> GlassTuning()
-    // 液态玻璃：只换折射的绘制方式，底色 / 边光 / 调色与柔光一致，模糊单独压低一档
+    // 液态玻璃：折射换位移场 + 调色走 liquidClear()，模糊单独压低一档
     GlassMaterialLevel.LIQUID -> GlassTuning(
         blurDp = 4f,
         panelBlurDp = 8f,
@@ -50,3 +51,13 @@ fun GlassMaterialLevel.surfaceAlpha(base: Float, isLight: Boolean): Float {
     val drop = if (isLight) tuning().surfaceAlphaDropLight else tuning().surfaceAlphaDropDark
     return (base - drop).coerceAtLeast(0f)
 }
+
+/** 液态档清透口径：玻璃体只留 40%（柔光档 0.85），调色不再叠色膜。 */
+fun SoftGlassStyle.liquidClear(): SoftGlassStyle = copy(
+    bodyDensity = 0.4f,
+    saturation = 1.2f,
+    brightness = 0f,
+    innerColorMix = 0.1f,
+    luminanceAmount = 0.05f,
+    colorPow = 1f,
+)

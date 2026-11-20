@@ -123,6 +123,7 @@ fun GlassRuntimeShader.applySoftGlass(
     setFloatUniform("uBgBri", style.bgColorBrightness)
     setFloatUniform("uInnerWhite", style.innerColorWhite)
     setFloatUniform("uInnerMix", style.innerColorMix)
+    setFloatUniform("uBodyDensity", style.bodyDensity.coerceIn(0f, 1f))
     setFloatUniform("uBurn", style.burn)
     val gc = style.glassColor
     setFloatUniform("uGlassColor", gc.red, gc.green, gc.blue, style.glassColorMix)

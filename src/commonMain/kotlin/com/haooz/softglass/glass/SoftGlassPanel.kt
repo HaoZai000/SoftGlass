@@ -232,5 +232,6 @@ private fun GlassShaderProgram.applyBodyUniforms(
     setFloat("uBgBri", style.bgColorBrightness)
     setFloat("uInnerWhite", style.innerColorWhite)
     setFloat("uInnerMix", style.innerColorMix)
+    setFloat("uBodyDensity", style.bodyDensity.coerceIn(0f, 1f))
     setFloat("uBurn", style.burn)
 }
