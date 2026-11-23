@@ -3,12 +3,9 @@ package com.haooz.softglass.platform
 /**
  * uniform 写入缓存：同一 shader 实例上重复写相同值直接跳过。
  *
- * 实时路径每个控件每帧都会重灌一整套样式（约 35 个 uniform），真正逐帧变化的
- * 只有尺寸 / 原点 / 展开进度少数几个。缓存把重复的 JNI 调用（Android）与
- * builder 写入（Skiko）省掉，视觉完全不变。
- *
- * 缓存记录的是「该实例最后一次实际写入的值」，共享同一个 shader 的多个控件
- * 交替写入也不会漏写：值不同就会走真实写入并更新缓存。
+ * 实时路径每控件每帧重灌约 35 个 uniform，真正逐帧变化的只有尺寸 / 原点 / 展开进度少数几个；
+ * 缓存省掉重复的 JNI（Android）/ builder（Skiko）写入且视觉不变。缓存记录该实例最后一次实际
+ * 写入的值，共享同一 shader 的多个控件交替写入也不会漏写：值不同就走真实写入并更新缓存。
  */
 internal class UniformCache {
 

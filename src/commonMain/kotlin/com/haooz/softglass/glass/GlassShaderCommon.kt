@@ -5,15 +5,12 @@ import com.haooz.softglass.shape.SdfG2Corner
 internal val GLASS_SDF = SdfG2Corner.shaderSource
 
 /**
- * 液态玻璃折射（移植自 AndroidLiquidGlass 的 `RoundedRectRefractionShaderString`）。
+ * 液态玻璃折射位移场（移植自 AndroidLiquidGlass 的 `RoundedRectRefractionShaderString`）：
+ * 沿圆角矩形 SDF 梯度向内采样，剖面 `1 - sqrt(1 - t²)`（越靠外位移越大、带尾导数为 0），
+ * 梯度半径放宽到 1.5r 并叠径向项以消除圆角切点曲率跳变；倒角法线、方向光、反射、调色仍走柔光那套。
  *
- * 只负责「位移场」：带内沿圆角矩形 SDF 梯度向形状内部采样，剖面是 `1 - sqrt(1 - t²)`，
- * 越靠外边缘位移越大、带尾导数为 0；梯度半径放宽到 1.5r 再叠径向项，藏掉圆角切点处的
- * 曲率跳变。倒角法线、方向光、反射、调色仍走柔光玻璃那一套。
- *
- * `uLiquidInnerX` 是柔光 `inner` 的硬切位置（edgePow = 4 时约 0.564×edgeWidth）：
- * 折射带高必须卡在它以内，边光 / 反射也要在到达它之前由 `liquidEdgeGate` 收到 0，
- * 否则会在内区边界留下一条「折射突然消失」的硬边。
+ * 硬切位置 `uLiquidInnerX`（edgePow = 4 时约 0.564×edgeWidth）是兼容红线：折射带高须卡在其内，
+ * 边光 / 反射须在到达前由 `liquidEdgeGate` 收到 0，否则内区边界会留下折射硬边。
  */
 internal val GLASS_LIQUID = """
 uniform float uLiquid;
