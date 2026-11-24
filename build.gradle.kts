@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.haooz.softglass"
-version = providers.gradleProperty("softglass.version").getOrElse("0.1.3")
+version = providers.gradleProperty("softglass.version").getOrElse("0.1.4")
 
 kotlin {
     android {

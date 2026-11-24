@@ -41,7 +41,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.HaoZai000.SoftGlass:softglass:0.1.3")
+    implementation("com.github.HaoZai000.SoftGlass:softglass:0.1.4")
 }
 ```
 
